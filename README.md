@@ -2,11 +2,11 @@
 
 An interactive web application designed to demonstrate the mathematical principles behind **btrack**, a Python library for reconstructing trajectories in complex dynamic systems using Bayesian inference and global optimization.
 
-## Run the Application
+## Interactive Visualization
 
-You can run and edit this application directly in Google AI Studio:
+Experience the application and explore the code directly in Google AI Studio:
 
-[![Run on Google AI Studio](https://img.shields.io/badge/Run%20on-Google%20AI%20Studio-4285F4?style=for-the-badge&logo=google)](https://aistudio.google.com/)
+[![Visualize on Google AI Studio](https://img.shields.io/badge/Visualize%20on-Google%20AI%20Studio-4285F4?style=for-the-badge&logo=google)](https://aistudio.google.com/)
 
 ## Overview
 
