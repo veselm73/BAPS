@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, GitMerge, BarChart2, MousePointer2, Sigma, Shuffle, ArrowRight, Target, Network } from 'lucide-react';
+import { Activity, GitMerge, BarChart2, MousePointer2, Sigma, Shuffle, ArrowRight, Target, Network, AlertTriangle, CheckCircle } from 'lucide-react';
 
 // --- CROSSING VISUALIZATION ---
 // Demonstrates ID Switching problem and solution
@@ -27,15 +27,15 @@ export const CrossingVisual: React.FC = () => {
             <div className="flex gap-4 mb-6">
                 <button 
                     onClick={() => { setMode('greedy'); setKey(k => k+1); }}
-                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${mode === 'greedy' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${mode === 'greedy' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                 >
-                    Greedy (Nearest)
+                    Greedy (Nearest Neighbor)
                 </button>
                 <button 
                     onClick={() => { setMode('btrack'); setKey(k => k+1); }}
                     className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${mode === 'btrack' ? 'bg-brand-blue text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                 >
-                    btrack (Motion)
+                    btrack (Motion Model)
                 </button>
             </div>
 
@@ -80,15 +80,27 @@ export const CrossingVisual: React.FC = () => {
                  </div>
             </div>
 
-            <div className="mt-4 px-4 text-center">
+            <div className={`mt-6 p-4 rounded-lg border ${mode === 'greedy' ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100'} text-center max-w-md transition-colors duration-300`}>
                 {mode === 'greedy' ? (
-                    <p className="text-sm text-red-600 font-medium">
-                        <span className="font-bold">Chyba (ID Swap):</span> V bodě křížení jsou objekty blízko sebe. Algoritmus omylem prohodí jejich identity.
-                    </p>
+                    <div>
+                        <div className="flex items-center justify-center gap-2 text-red-700 font-bold mb-1">
+                            <AlertTriangle size={16} />
+                            <span>Selhání: Identity Switch</span>
+                        </div>
+                        <p className="text-sm text-red-600">
+                            Algoritmus hledá pouze nejbližší bod. V místě křížení jsou objekty blízko sebe, takže NN algoritmus "skočí" na špatnou trajektorii. Ignoruje setrvačnost.
+                        </p>
+                    </div>
                 ) : (
-                    <p className="text-sm text-brand-blue font-medium">
-                        <span className="font-bold">Správně:</span> Pohybový model predikuje směr. I přes překryv si objekty udrží své trajektorie.
-                    </p>
+                    <div>
+                        <div className="flex items-center justify-center gap-2 text-brand-blue font-bold mb-1">
+                            <CheckCircle size={16} />
+                            <span>Správně: Zachování Hybnosti</span>
+                        </div>
+                        <p className="text-sm text-blue-700">
+                             Díky Kalmanovu filtru má systém "paměť" (vektor rychlosti). Predikuje, že objekt A bude pokračovat dolů a objekt B nahoru, i když se překrývají.
+                        </p>
+                    </div>
                 )}
             </div>
         </div>
@@ -170,7 +182,7 @@ export const TrackingSimulation: React.FC = () => {
                 ctx.lineWidth = 2;
                 ctx.setLineDash([]);
             } else {
-                ctx.strokeStyle = '#78716c'; // Slate for greedy
+                ctx.strokeStyle = '#94a3b8'; // Slate 400
                 ctx.lineWidth = 1;
                 ctx.setLineDash([4, 4]); // Dashed for uncertain/greedy
             }
@@ -183,13 +195,36 @@ export const TrackingSimulation: React.FC = () => {
         ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Prediction Visual (Kalman)
+        // METHOD VISUALIZATION
         if (method === 'bayesian') {
-             ctx.strokeStyle = 'rgba(37, 99, 235, 0.5)'; // Brand Blue transparent
-             ctx.fillStyle = 'rgba(37, 99, 235, 0.1)';
+             // Show PREDICTION VECTOR (Kalman)
+             const predX = p.x + p.vx * 15;
+             const predY = p.y + p.vy * 15;
+             
+             // Draw arrow
+             ctx.strokeStyle = '#2563EB';
+             ctx.fillStyle = '#2563EB';
+             ctx.lineWidth = 2;
              ctx.beginPath();
-             ctx.arc(p.x + p.vx * 10, p.y + p.vy * 10, 8, 0, Math.PI * 2); // Predicted position
+             ctx.moveTo(p.x, p.y);
+             ctx.lineTo(predX, predY);
              ctx.stroke();
+             
+             // Draw search area at prediction
+             ctx.fillStyle = 'rgba(37, 99, 235, 0.15)';
+             ctx.beginPath();
+             ctx.arc(predX, predY, 10, 0, Math.PI * 2);
+             ctx.fill();
+
+        } else {
+             // Show SEARCH RADIUS (Greedy)
+             ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)'; // Red
+             ctx.lineWidth = 1;
+             ctx.beginPath();
+             ctx.arc(p.x, p.y, 25, 0, Math.PI * 2); // Naive search radius around CURRENT pos
+             ctx.stroke();
+             
+             ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
              ctx.fill();
         }
       });
@@ -204,33 +239,76 @@ export const TrackingSimulation: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center p-8 bg-white rounded-xl shadow-sm border border-slate-200 my-8">
-      <h3 className="font-serif text-xl mb-4 text-slate-800">Simulace Sledování</h3>
-      <div className="flex gap-4 mb-4">
+      <h3 className="font-serif text-xl mb-6 text-slate-800">Simulace Metod Sledování</h3>
+      <div className="flex gap-4 mb-6">
         <button 
             onClick={() => setMethod('greedy')}
-            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${method === 'greedy' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${method === 'greedy' ? 'bg-red-100 text-red-700 border border-red-200 shadow-inner' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-200'}`}
         >
-            Greedy (Nearest)
+            Greedy (NN)
         </button>
         <button 
             onClick={() => setMethod('bayesian')}
-            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${method === 'bayesian' ? 'bg-brand-blue text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${method === 'bayesian' ? 'bg-brand-blue text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-200'}`}
         >
-            Bayesian (Optimized)
+            Bayesian (btrack)
         </button>
       </div>
       
-      <canvas 
-        ref={canvasRef} 
-        width={400} 
-        height={300} 
-        className="w-full bg-slate-100 rounded-lg border border-slate-200 cursor-crosshair"
-      />
+      <div className="relative w-full">
+        <canvas 
+            ref={canvasRef} 
+            width={400} 
+            height={300} 
+            className="w-full bg-slate-50 rounded-lg border border-slate-200"
+        />
+        {/* Legend Overlay */}
+        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-2 rounded text-[10px] border border-slate-100 shadow-sm">
+            {method === 'greedy' ? (
+                <div className="flex items-center gap-1 text-red-600"><div className="w-2 h-2 rounded-full border border-red-500 bg-red-100"></div> Search Radius</div>
+            ) : (
+                <div className="flex items-center gap-1 text-brand-blue"><div className="w-2 h-2 rounded-full bg-brand-blue"></div> Predikce</div>
+            )}
+        </div>
+      </div>
 
-      <div className="mt-4 text-sm font-serif italic text-slate-600 text-center px-4">
-        {method === 'bayesian' 
-            ? "Zobrazen Bayesovský update: Predikce (Prior) je korigována pozorováním pro získání a posteriori odhadu." 
-            : "Zobrazena Greedy metoda: Deterministické spojování nejbližších bodů bez pravděpodobnostního modelu."}
+      {/* Comparison Table */}
+      <div className="grid grid-cols-2 gap-4 mt-6 w-full">
+          <div className={`p-4 rounded-lg border ${method === 'greedy' ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+              <h4 className="font-bold text-slate-900 text-xs uppercase mb-2 flex items-center gap-2">
+                  <AlertTriangle size={12} className="text-red-500"/>
+                  Greedy (NN)
+              </h4>
+              <ul className="space-y-2">
+                  <li className="text-xs text-slate-600 flex items-start gap-1.5">
+                      <span className="text-red-400 mt-0.5">✖</span> Hledá jen v kruhu kolem poslední pozice.
+                  </li>
+                  <li className="text-xs text-slate-600 flex items-start gap-1.5">
+                      <span className="text-red-400 mt-0.5">✖</span> Ignoruje rychlost a směr pohybu.
+                  </li>
+                  <li className="text-xs text-slate-600 flex items-start gap-1.5">
+                      <span className="text-red-400 mt-0.5">✖</span> Selhává při křížení a okluzích.
+                  </li>
+              </ul>
+          </div>
+
+          <div className={`p-4 rounded-lg border ${method === 'bayesian' ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+              <h4 className="font-bold text-slate-900 text-xs uppercase mb-2 flex items-center gap-2">
+                  <Activity size={12} className="text-brand-blue"/>
+                  btrack (Bayesian)
+              </h4>
+              <ul className="space-y-2">
+                  <li className="text-xs text-slate-600 flex items-start gap-1.5">
+                      <span className="text-blue-500 mt-0.5">✓</span> Kalmanův filtr predikuje novou pozici.
+                  </li>
+                  <li className="text-xs text-slate-600 flex items-start gap-1.5">
+                      <span className="text-blue-500 mt-0.5">✓</span> Search region se posouvá s objektem.
+                  </li>
+                  <li className="text-xs text-slate-600 flex items-start gap-1.5">
+                      <span className="text-blue-500 mt-0.5">✓</span> Rozliší objekty i při průletu.
+                  </li>
+              </ul>
+          </div>
       </div>
     </div>
   );
@@ -300,12 +378,9 @@ export const GatingVisual: React.FC = () => {
                 </AnimatePresence>
 
                 {/* Detection Points */}
-                {/* Point A: Far away in distance, but aligns with motion (accepted by Mahalanobis, rejected by Euclidean sometimes or vice versa depending on scale) */}
-                {/* Let's construct a case: Point aligned with motion (ellipse major axis) but far. */}
                 <div className="absolute top-[38%] right-[15%] w-3 h-3 bg-green-500 rounded-full border border-white z-20 shadow-sm flex items-center justify-center">
                     <span className="absolute -bottom-4 text-[9px] font-bold text-slate-600">D1</span>
                 </div>
-                {/* Point B: Close in distance, but orthogonal to motion (accepted by Euclidean, rejected by Mahalanobis) */}
                 <div className="absolute bottom-[20%] left-[45%] w-3 h-3 bg-red-500 rounded-full border border-white z-20 shadow-sm flex items-center justify-center">
                     <span className="absolute -bottom-4 text-[9px] font-bold text-slate-600">D2</span>
                 </div>
@@ -348,7 +423,7 @@ export const HypothesisTree: React.FC = () => {
 
                 {/* Edges Container */}
                 <div className="absolute top-6 left-0 w-full h-full pointer-events-none">
-                     <svg className="w-full h-full visible" style={{overflow: 'visible'}}>
+                     <svg className="w-full h-full visible" style={{overflow: 'visible'}} viewBox="0 0 512 220" preserveAspectRatio="none">
                         {/* Left Branch (Link) */}
                         <path d="M 256 24 C 256 100, 100 100, 100 180" fill="none" stroke="#2563EB" strokeWidth="2" strokeDasharray="4 2" />
                         {/* Middle Branch (Apoptosis) */}
